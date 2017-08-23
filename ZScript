@@ -36,8 +36,8 @@ class ShieldGenerator : Armor {
 		ShieldGenerator.SavePercent 30;
 		ShieldGenerator.MaxSavePercent 90;
 		ShieldGenerator.CellType "ShieldCell";
-		ShieldGenerator.ShieldLowWarning 25, "\cgWarning:\c+ Shield Low";
-		ShieldGenerator.ShieldDepletedWarning "\cgDanger:\c+ Shield Depleted";
+		ShieldGenerator.ShieldLowWarning 25, "\crWarning:\c- Shield Low";
+		ShieldGenerator.ShieldDepletedWarning "\crDanger:\c- Shield Depleted";
 		ShieldGenerator.MaxAbsorb int.max;
 		ShieldGenerator.MaxFullAbsorb 1;
 	}
