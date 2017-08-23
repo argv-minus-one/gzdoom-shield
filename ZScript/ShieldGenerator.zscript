@@ -33,7 +33,7 @@ class ShieldGenerator : Armor {
 	
 	default {
 		+Inventory.KEEPDEPLETED;
-		Inventory.Amount 50;
+		Inventory.Amount 0;
 		Inventory.MaxAmount 200;
 		Inventory.Icon "ARM1A0";
 		ShieldGenerator.SavePercent 30;
