@@ -1,0 +1,359 @@
+Version "2.5"
+
+class ShieldGenerator : Armor {
+	double SavePercent;
+	property SavePercent: SavePercent;
+	
+	double MaxAbsorb;
+	property MaxAbsorb: MaxAbsorb;
+	
+	double MaxFullAbsorb;
+	property MaxFullAbsorb: MaxFullAbsorb;
+	
+	double MaxSavePercent;
+	property MaxSavePercent: MaxSavePercent;
+	
+	Class<ShieldCell> BaseCellType;
+	property CellType: BaseCellType;
+	
+	int ShieldLowWarningThreshold;
+	String ShieldLowWarningMessage;
+	property ShieldLowWarning: ShieldLowWarningThreshold, ShieldLowWarningMessage;
+	
+	String ShieldDepletedWarningMessage;
+	property ShieldDepletedWarning: ShieldDepletedWarningMessage;
+	
+	int AbsorbCount;
+	
+	// HACK: Lobotomize the BasicArmor in order to display the shield's status on the standard HUD. Yuck.
+	protected BasicArmor LoboBasicArmor;
+	
+	default {
+		+Inventory.KEEPDEPLETED;
+		Inventory.Amount 50;
+		Inventory.MaxAmount int.max;
+		Inventory.Icon "ARM1A0";
+		ShieldGenerator.SavePercent 30;
+		ShieldGenerator.MaxSavePercent 90;
+		ShieldGenerator.CellType "ShieldCell";
+		ShieldGenerator.ShieldLowWarning 25, "\cgWarning:\c+ Shield Low";
+		ShieldGenerator.ShieldDepletedWarning "\cgDanger:\c+ Shield Depleted";
+		ShieldGenerator.MaxAbsorb int.max;
+		ShieldGenerator.MaxFullAbsorb 1;
+	}
+	
+	static ShieldGenerator Of(Actor actor) {
+		return ShieldGenerator(actor.FindInventory("ShieldGenerator", subclass: true));
+	}
+	
+	protected void RefreshLoboBasicArmor() {
+		if (LoboBasicArmor == NULL || Owner != LoboBasicArmor.Owner) {
+			LoboBasicArmor = BasicArmor(Owner.FindInventory("BasicArmor"));
+			
+			if (LoboBasicArmor != NULL) {
+				LoboBasicArmor.SavePercent = 0;
+				LoboBasicArmor.MaxAbsorb = 0;
+				LoboBasicArmor.MaxFullAbsorb = 0;
+				LoboBasicArmor.BonusCount = 0;
+				LoboBasicArmor.ArmorType = GetClassName();
+			}
+		}
+		
+		if (LoboBasicArmor != NULL) {
+			LoboBasicArmor.ActualSaveAmount = LoboBasicArmor.Amount = Amount;
+			LoboBasicArmor.MaxAmount = MaxAmount;
+		}
+	}
+	
+	override void AbsorbDamage(int damage, Name damageType, out int newdamage) {
+		if (DamageTypeDefinition.IgnoreArmor(damageType))
+			return;
+		
+		if (Amount <= 0) {
+			if (developer >= 1)
+				Console.Printf("%s is down! Absorbed 0/%d damage.", GetClassName(), damage);
+			
+			return;
+		}
+		
+		int saved;
+		int full = MAX(0, MaxFullAbsorb - AbsorbCount);
+		
+		if (damage < full)
+			saved = damage;
+		else {
+			saved = full + int((damage - full) * (SavePercent / 100.0));
+			
+			if (MaxAbsorb > 0 && saved + AbsorbCount > MaxAbsorb)
+				saved = MAX(0,  MaxAbsorb - AbsorbCount);
+		}
+
+		if (Amount < saved)
+			saved = Amount;
+		
+		let previousAmount = Amount;
+		newdamage = damage - saved;
+		Amount -= saved;
+		AbsorbCount += saved;
+		
+		if (developer >= 1)
+			Console.Printf("%s absorbed %d/%d damage (%f%% resistance). Had %d charge, but now only have %d.", GetClassName(), saved, damage, SavePercent, previousAmount, Amount);
+		
+		if (LoboBasicArmor != NULL) {
+			LoboBasicArmor.AbsorbCount = AbsorbCount;
+			LoboBasicArmor.ActualSaveAmount = LoboBasicArmor.Amount = Amount;
+		}
+		
+		if (Owner != NULL) {
+			if (previousAmount > 0 && Amount <= 0) {
+				if (ShieldDepletedWarningMessage != "")
+					Owner.A_Print(ShieldDepletedWarningMessage);
+			}
+			else if (ShieldLowWarningThreshold > 0 && ShieldLowWarningThreshold < previousAmount && ShieldLowWarningThreshold >= Amount) {
+				if (ShieldLowWarningMessage != "")
+					Owner.A_Print(ShieldLowWarningMessage);
+			}
+		}
+	}
+	
+	override Inventory CreateCopy(Actor other) {
+		let copy = ShieldGenerator(Inventory.CreateCopy(other));
+		copy.SavePercent = SavePercent;
+		GoAwayAndDie();
+		return copy;
+	}
+	
+	override void Tick() {
+		super.Tick();
+		RefreshLoboBasicArmor();
+	}
+}
+
+class ShieldGeneratorUpgrade : Inventory {
+	Class<ShieldCell> IncludedCellType;
+	int IncludedCellAmount, IncludedCellRandomVariance;
+	property IncludedCell: IncludedCellAmount, IncludedCellRandomVariance, IncludedCellType;
+	
+	double SavePercentBonusMin, SavePercentBonusMax, SavePercentBonus;
+	property SavePercentBonus: SavePercentBonusMin, SavePercentBonusMax;
+	
+	default {
+		+Inventory.AUTOACTIVATE;
+	}
+	
+	override void BeginPlay() {
+		super.BeginPlay();
+		
+		if (IncludedCellRandomVariance != 0)
+			IncludedCellAmount += random(-IncludedCellRandomVariance, IncludedCellRandomVariance);
+		
+		if (SavePercentBonusMin == SavePercentBonusMax)
+			SavePercentBonus = SavePercentBonusMin;
+		else
+			SavePercentBonus = SavePercentBonusMin + frandom(0, SavePercentBonusMax - SavePercentBonusMin);
+	}
+	
+	override bool Use(bool pickup) {
+		let generator = ShieldGenerator.Of(Owner);
+		if (generator == NULL) {
+			if (developer >= 1)
+				Console.Printf("%s does not have a ShieldGenerator, and therefore can't use this %s.", Owner.GetClassName(), GetClassName());
+			
+			return false;
+		}
+		
+		if (!InstallUpgrade(generator))
+			return false;
+		else {
+			GiveCells(generator);
+			return true;
+		}
+	}
+	
+	protected virtual bool InstallUpgrade(ShieldGenerator generator) {
+		let currentSaveOfMax = generator.SavePercent / generator.MaxSavePercent;
+		let saveGain = SavePercentBonus;
+		saveGain *= (1.0 - currentSaveOfMax) * (1.0 - currentSaveOfMax); // (1-x)^2
+		
+		if (saveGain <= 0.0) {
+			if (developer >= 1)
+				Console.Printf("Shield upgrade: previously absorbed %f%%; upgrade gain %f%% <= 0. Failing.", generator.SavePercent, SavePercentBonus, generator.SavePercent + saveGain);
+			
+			return false;
+		}
+		else {
+			if (developer >= 1)
+				Console.Printf("Shield upgrade: previously absorbed %f%%; upgrade gain %f%%; new absorb %f%%.", generator.SavePercent, SavePercentBonus, generator.SavePercent + saveGain);
+			
+			generator.SavePercent += saveGain;
+			
+			if (generator.SavePercent > generator.MaxSavePercent)
+				Console.Printf("\crShield upgrade: %s shield now absorbs %f%%, in excess of max %f%%!", generator.SavePercent, generator.MaxSavePercent);
+			
+			return true;
+		}
+	}
+	
+	protected virtual void GiveCells(ShieldGenerator generator) {
+		if (IncludedCellAmount <= 0)
+			return;
+		
+		// Create a shield cell of the appropriate type.
+		let cell = ShieldCell(Actor.Spawn(IncludedCellType, Owner.Pos, ALLOW_REPLACE));
+		cell.Amount = IncludedCellAmount;
+		
+		// If this shield upgrade has an owner (which it should!), try to give the shield cell too.
+		// Drop whatever's left (if anything) on the floor.
+		if (Owner == NULL || !cell.CallTryPickup(Owner)) {
+			cell.BecomePickup();
+			cell.DropTime = 30;
+			cell.bSpecial = cell.bSolid = false;
+		}
+	}
+}
+
+class ShieldGeneratorUpgradeType3 : ShieldGeneratorUpgrade {
+	default {
+		Inventory.PickupMessage "Picked up a type 3 shield generator upgrade!";
+		Inventory.Icon "ARM1A0";
+		ShieldGeneratorUpgrade.IncludedCell 100, 30, "ShieldCellMedium";
+		ShieldGeneratorUpgrade.SavePercentBonus 5, 15;
+		Radius 20;
+		Height 16;
+	}
+	
+	states {
+		Spawn:
+			ARM1 A 6;
+			ARM1 A 7 bright;
+			loop;
+	}
+}
+
+class ShieldGeneratorUpgradeType7 : ShieldGeneratorUpgrade {
+	default {
+		Inventory.PickupMessage "Picked up a type 7 advanced shield generator upgrade!";
+		Inventory.Icon "ARM2A0";
+		ShieldGeneratorUpgrade.IncludedCell 200, 50, "ShieldCellLarge";
+		ShieldGeneratorUpgrade.SavePercentBonus 15, 30;
+		Radius 20;
+		Height 16;
+	}
+	
+	states {
+		Spawn:
+			ARM2 A 6;
+			ARM2 A 7 bright;
+			loop;
+	}
+}
+
+class ShieldCell : Inventory replaces ArmorBonus {
+	int AmountRandomVariance;
+	property AmountRandomVariance: AmountRandomVariance;
+	
+	default {
+		+Inventory.KEEPDEPLETED;
+		Inventory.PickupMessage "Picked up a small shield cell.";
+		Inventory.Amount 2;
+		ShieldCell.AmountRandomVariance 1;
+		Inventory.MaxAmount 0x7FFFFFFF;
+		Radius 20;
+		Height 16;
+	}
+	
+	override void BeginPlay() {
+		super.BeginPlay();
+		
+		if (AmountRandomVariance != 0)
+			Amount += random(-AmountRandomVariance, AmountRandomVariance);
+	}
+	
+	override bool TryPickup(in out Actor other) {
+		let generator = ShieldGenerator.Of(other);
+		if (generator == NULL || !(self is generator.BaseCellType))
+			// If the recipient has no generator or an incompatible generator, don't try to pick up the cell.
+			return false;
+		
+		let af = bIgnoreSkill ? 1.0 : G_SkillPropertyFloat(SKILLP_ArmorFactor);
+		
+		if (sv_unlimited_pickup) {
+			generator.Amount += int(Amount * af);
+			Amount = 0;
+			GoAwayAndDie();
+			return true;
+		}
+		else if (generator.Amount < generator.MaxAmount) {
+			let give = min(generator.MaxAmount - generator.Amount, int(floor(Amount * af)));
+			generator.Amount += give;
+			Amount -= int(ceil(give / af));
+			
+			if (Amount <= 0) {
+				GoAwayAndDie();
+				return true;
+			}
+			else
+				return false;
+		}
+		else
+			return false;
+	}
+	
+	states {
+		Spawn:
+			BON2 ABCDCB 6;
+			loop;
+	}
+}
+
+class ShieldCellMedium : ShieldCell {
+	default {
+		Inventory.PickupMessage "Picked up a medium shield cell.";
+		Inventory.Amount 100;
+		ShieldCell.AmountRandomVariance 30;
+		Height 24;
+	}
+}
+
+class ShieldCellLarge : ShieldCell {
+	default {
+		Inventory.PickupMessage "Picked up a large shield cell.";
+		Inventory.Amount 200;
+		ShieldCell.AmountRandomVariance 50;
+		Height 32;
+	}
+}
+
+class ShieldCellUpgradeSpawnerMedium : RandomSpawner replaces GreenArmor {
+	default {
+		DropItem "ShieldCellMedium", 255, 4;
+		DropItem "ShieldGeneratorUpgradeType3", 255, 1;
+	}
+}
+
+class ShieldCellUpgradeSpawnerLarge : RandomSpawner replaces BlueArmor {
+	default {
+		DropItem "ShieldCellLarge", 255, 4;
+		DropItem "ShieldGeneratorUpgradeType7", 255, 1;
+	}
+}
+
+class SpawnShieldGiver : StaticEventHandler {
+	override void PlayerEntered(PlayerEvent evt) { PlayerSpawned(evt); }
+	override void PlayerRespawned(PlayerEvent evt) { PlayerSpawned(evt); }
+	
+	void PlayerSpawned(PlayerEvent evt) {
+		let pc = players[evt.PlayerNumber].mo;
+		let generator = ShieldGenerator(Actor.Spawn("ShieldGenerator"));
+		
+		bool pickupResult;
+		Actor recipient;
+		[pickupResult, recipient] = generator.CallTryPickup(pc);
+		
+		if (!pickupResult) {
+			Console.Printf("\crFailed to give %s to %s.", generator.GetClassName(), pc.GetClassName());
+			generator.Destroy();
+			return;
+		}
+	}
+}
