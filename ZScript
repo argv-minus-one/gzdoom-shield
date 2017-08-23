@@ -257,7 +257,6 @@ class ShieldCell : Inventory replaces ArmorBonus {
 		Inventory.PickupMessage "Picked up a small shield cell.";
 		Inventory.Amount 2;
 		ShieldCell.AmountRandomVariance 1;
-		Inventory.MaxAmount 0x7FFFFFFF;
 		Radius 20;
 		Height 16;
 	}
