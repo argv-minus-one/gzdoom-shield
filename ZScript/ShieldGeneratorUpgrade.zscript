@@ -1,0 +1,191 @@
+class ShieldGeneratorUpgrade : Inventory {
+	Class<ShieldCell> IncludedCellType;
+	int IncludedCellAmountMin, IncludedCellAmountMax, IncludedCellAmount;
+	property IncludedCell: IncludedCellAmountMin, IncludedCellAmountMax, IncludedCellType;
+	
+	double SavePercentBonusMin, SavePercentBonusMax, SavePercentBonus;
+	property SavePercentBonus: SavePercentBonusMin, SavePercentBonusMax;
+	
+	double FullAbsorbBonusMin, FullAbsorbBonusMax, FullAbsorbBonus;
+	property FullAbsorbBonus: FullAbsorbBonusMin, FullAbsorbBonusMax;
+	
+	double CellEfficiencyBonusMin, CellEfficiencyBonusMax, CellEfficiencyBonus;
+	property CellEfficiencyBonus: CellEfficiencyBonusMin, CellEfficiencyBonusMax;
+	
+	default {
+		+Inventory.AUTOACTIVATE;
+	}
+	
+	override void BeginPlay() {
+		super.BeginPlay();
+		
+		IncludedCellAmount = random(IncludedCellAmountMin, IncludedCellAmountMax);
+		SavePercentBonus = frandom(SavePercentBonusMin, SavePercentBonusMax);
+		FullAbsorbBonus = frandom(FullAbsorbBonusMin, FullAbsorbBonusMax);
+		CellEfficiencyBonus = frandom(CellEfficiencyBonusMin, CellEfficiencyBonusMax);
+	}
+	
+	override bool TryPickup(in out Actor other) {
+		let generator = ShieldGenerator.Of(other);
+		if (generator == NULL) {
+			if (developer >= 1)
+				Console.Printf("%s does not have a ShieldGenerator, and therefore can't use this %s.", other.GetClassName(), GetClassName());
+			
+			return false;
+		}
+		
+		if (!InstallUpgrade(generator))
+			return GiveCells(generator, dropIfFull: false);
+		else {
+			GiveCells(generator, dropIfFull: true);
+			GoAwayAndDie();
+			return true;
+		}
+	}
+	
+	protected virtual bool InstallUpgrade(ShieldGenerator generator) {
+		return
+			InstallSaveUpgrade(generator) |
+			InstallFullAbsorbUpgrade(generator) |
+			InstallCellEfficiencyUpgrade(generator);
+	}
+	
+	private bool InstallSaveUpgrade(ShieldGenerator generator) {
+		/* Math:
+		 * NewSave = Save + (SaveBonus * (MaxSave - Save))
+		 * e.g. let Save = 0.3, SaveBonus = 0.1, MaxSave = 0.8:
+		 *      0.3 + (0.1 * (0.8 - 0.3)) = 0.35
+		 * e.g. let Save = 0.3, SaveBonus = 0.5, MaxSave = 0.7:
+		 *      0.3 + (0.5 * (0.7 - 0.3)) = 0.5
+		 * Note that all of these variables are * 100 (i.e. percentages), so we need to handle them accordingly.
+		 */
+		
+		let oldSavePercent = generator.SavePercent;
+		generator.SavePercent += ((SavePercentBonus / 100.0) * ((generator.MaxSavePercent / 100.0) - (generator.SavePercent / 100.0))) * 100.0;
+		
+		if (generator.SavePercent > oldSavePercent) {
+			if (developer >= 1)
+				Console.Printf("%s: Generator absorption rate increased from %f%% to %f%%. (Bonus before adjustment: %f%%.)", GetClassName(), oldSavePercent, generator.SavePercent, SavePercentBonus);
+			
+			return true;
+		}
+		else {
+			// Just in case some floating-point weirdness somehow produced a *lower* value.
+			generator.SavePercent = oldSavePercent;
+			
+			if (developer >= 1)
+				Console.Printf("%s: No effect on generator absorption rate of %f%%. (Bonus before adjustment: %f%%.)", GetClassName(), generator.SavePercent, SavePercentBonus);
+			
+			return false;
+		}
+	}
+	
+	private bool InstallFullAbsorbUpgrade(ShieldGenerator generator) {
+		let oldFullAbsorb = generator.MaxFullAbsorb;
+		generator.MaxFullAbsorb += FullAbsorbBonus;
+		
+		if (developer >= 1)
+			Console.Printf("%s: Generator full-absorb threshold increased from %f to %f.", GetClassName(), oldFullAbsorb, generator.MaxFullAbsorb, FullAbsorbBonus);
+		
+		return true;
+	}
+	
+	private bool InstallCellEfficiencyUpgrade(ShieldGenerator generator) {
+		/* Math:
+		 * NewCellEfficiency = CellEfficiency - (CellEfficiencyBonus * (CellEfficiency - MinCellEfficiency))
+		 * e.g. let CellEfficiency = 1, CellEfficiencyBonus = 0.1, MinCellEfficiency = 0.4:
+		 *      1 - (0.1 * (1 - 0.4)) = 0.94
+		 * e.g. let CellEfficiency = 1, CellEfficiencyBonus = 0.5, MinCellEfficiency = 0.5:
+		 *      1 - (0.5 * (1 - 0.5)) = 0.75
+		 * e.g. let CellEfficiency = 0.6, CellEfficiencyBonus = 0.1, MinCellEfficiency = 0.5:
+		 *      0.6 - (0.1 * (0.6 - 0.5)) = 0.59
+		 * e.g. let CellEfficiency = 0.51, CellEfficiencyBonus = 0.1, MinCellEfficiency = 0.5:
+		 *      0.51 - (0.1 * (0.51 - 0.5)) = 0.509
+		 */
+		
+		let oldCellEfficiency = generator.CellEfficiency;
+		generator.CellEfficiency -= CellEfficiencyBonus * (generator.CellEfficiency - generator.MinCellEfficiency);
+		
+		if (developer >= 1)
+			Console.Printf("%s: Generator efficiency rate (lower is better) decreased from %f%% to %f%%. (Bonus before adjustment: %f%%.)", GetClassName(), oldCellEfficiency * 100.0, generator.CellEfficiency * 100.0, CellEfficiencyBonus * 100.0);
+		
+		return true;
+	}
+	
+	/**
+	 * Give the included cells to the given shield generator.
+	 * 
+	 * @param generator Shield generator.
+	 * @param dropIfFull If true, remaining cell is dropped on the ground. If false (default), remaining cell remains inside this upgrade item.
+	 * @return True if this upgrade's included cell is now empty. False if not.
+	 */
+	protected virtual bool GiveCells(ShieldGenerator generator, bool dropIfFull = false) {
+		if (IncludedCellAmount <= 0)
+			return false;
+		
+		// Create a shield cell of the appropriate type.
+		let cell = ShieldCell(Actor.Spawn(IncludedCellType, generator.Owner.Pos, ALLOW_REPLACE));
+		cell.Amount = IncludedCellAmount;
+		IncludedCellAmount = 0;
+		
+		// If the shield generator has an owner (which it should!), try to give the shield cell too.
+		if (generator.Owner != NULL && cell.CallTryPickup(generator.Owner))
+			return true;
+		else if (!cell.bDestroyed && cell.Amount > 0) {
+			if (dropIfFull) {
+				// Drop whatever's left (if anything) on the floor.
+				cell.BecomePickup();
+				cell.DropTime = 30;
+				cell.bSpecial = cell.bSolid = false;
+				return true;
+			}
+			else {
+				// Strip this upgrade's cell, and leave what's left.
+				IncludedCellAmount = cell.Amount;
+				cell.Destroy();
+			}
+		}
+		
+		return IncludedCellAmount > 0;
+	}
+}
+
+class ShieldGeneratorUpgradeType3 : ShieldGeneratorUpgrade replaces GreenArmor {
+	default {
+		Inventory.PickupMessage "Picked up a type 3 shield generator upgrade!";
+		Inventory.Icon "ARM1A0";
+		ShieldGeneratorUpgrade.IncludedCell 70, 100, "ShieldCellMedium";
+		ShieldGeneratorUpgrade.SavePercentBonus 3, 8;
+		ShieldGeneratorUpgrade.FullAbsorbBonus 0.5, 1;
+		ShieldGeneratorUpgrade.CellEfficiencyBonus 0.02, 0.04;
+		Radius 20;
+		Height 16;
+	}
+	
+	states {
+		Spawn:
+			ARM1 A 6;
+			ARM1 A 7 bright;
+			loop;
+	}
+}
+
+class ShieldGeneratorUpgradeType7 : ShieldGeneratorUpgrade replaces BlueArmor {
+	default {
+		Inventory.PickupMessage "Picked up a type 7 advanced shield generator upgrade!";
+		Inventory.Icon "ARM2A0";
+		ShieldGeneratorUpgrade.IncludedCell 150, 200, "ShieldCellLarge";
+		ShieldGeneratorUpgrade.SavePercentBonus 8, 14;
+		ShieldGeneratorUpgrade.FullAbsorbBonus 1, 2;
+		ShieldGeneratorUpgrade.CellEfficiencyBonus 0.05, 0.1;
+		Radius 20;
+		Height 16;
+	}
+	
+	states {
+		Spawn:
+			ARM2 A 6;
+			ARM2 A 7 bright;
+			loop;
+	}
+}

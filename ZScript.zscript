@@ -1,0 +1,5 @@
+Version "2.5"
+#include "ZScript/ShieldGenerator.zscript"
+#include "ZScript/ShieldGeneratorUpgrade.zscript"
+#include "ZScript/ShieldCell.zscript"
+#include "ZScript/SpawnShieldGiver.zscript"

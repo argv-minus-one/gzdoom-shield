@@ -1,0 +1,153 @@
+/**
+ * The shield generator that all player characters carry. It is added whenever a player spawns.
+ * 
+ * This class is designed to be overridden. If you wish to customize it by doing so, be sure that your derived class has `replaces ShieldGenerator`. This will cause the player character to receive that shield generator instead.
+ */
+class ShieldGenerator : Armor {
+	double SavePercent;
+	property SavePercent: SavePercent;
+	
+	double MaxAbsorb;
+	property MaxAbsorb: MaxAbsorb;
+	
+	double MaxFullAbsorb;
+	property MaxFullAbsorb: MaxFullAbsorb;
+	
+	double MaxSavePercent;
+	property MaxSavePercent: MaxSavePercent;
+	
+	double CellEfficiency, MinCellEfficiency;
+	property CellEfficiency: CellEfficiency, MinCellEfficiency;
+	
+	Class<ShieldCell> BaseCellType;
+	property CellType: BaseCellType;
+	
+	int ShieldLowWarningThreshold;
+	String ShieldLowWarningMessage;
+	property ShieldLowWarning: ShieldLowWarningThreshold, ShieldLowWarningMessage;
+	
+	String ShieldDepletedWarningMessage;
+	property ShieldDepletedWarning: ShieldDepletedWarningMessage;
+	
+	int AbsorbCount;
+	
+	default {
+		+Inventory.KEEPDEPLETED;
+		Inventory.Amount 50;
+		Inventory.MaxAmount 200;
+		Inventory.Icon "ARM1A0";
+		ShieldGenerator.SavePercent 30;
+		ShieldGenerator.MaxSavePercent 80;
+		ShieldGenerator.CellType "ShieldCell";
+		ShieldGenerator.ShieldLowWarning 25, "\crWarning:\c- Shield Low";
+		ShieldGenerator.ShieldDepletedWarning "\crDanger:\c- Shield Depleted";
+		ShieldGenerator.MaxAbsorb int.max;
+		ShieldGenerator.MaxFullAbsorb 1;
+		ShieldGenerator.CellEfficiency 1, 0.5;
+	}
+	
+	static ShieldGenerator Of(Actor actor) {
+		return actor == NULL ? NULL : ShieldGenerator(actor.FindInventory("ShieldGenerator", subclass: true));
+	}
+	
+	override void AbsorbDamage(int damage, Name damageType, out int newdamage) {
+		if (DamageTypeDefinition.IgnoreArmor(damageType))
+			return;
+		
+		if (Amount <= 0) {
+			if (developer >= 1)
+				Console.Printf("%s is down! Absorbed 0/%d damage.", GetClassName(), damage);
+			
+			return;
+		}
+		
+		int saved;
+		int full = MAX(0, MaxFullAbsorb - AbsorbCount);
+		
+		if (damage < full)
+			saved = damage;
+		else {
+			saved = full + int((damage - full) * (SavePercent / 100.0));
+			
+			if (MaxAbsorb > 0 && saved + AbsorbCount > MaxAbsorb)
+				saved = MAX(0,  MaxAbsorb - AbsorbCount);
+		}
+
+		if (Amount < saved)
+			saved = Amount;
+		
+		let previousAmount = Amount;
+		newdamage = damage - saved;
+		Amount -= int(saved * CellEfficiency);
+		AbsorbCount += saved;
+		
+		if (developer >= 1)
+			Console.Printf("%s absorbed %d/%d damage (%f%% absorption, %d threshold, %d absorbed this tic). Charge down from %d to %d.", GetClassName(), saved, damage, SavePercent, int(MaxFullAbsorb), AbsorbCount, previousAmount, Amount);
+		
+		if (Owner != NULL) {
+			if (previousAmount > 0 && Amount <= 0) {
+				if (ShieldDepletedWarningMessage != "")
+					Owner.A_Print(ShieldDepletedWarningMessage);
+			}
+			else if (ShieldLowWarningThreshold > 0 && ShieldLowWarningThreshold < previousAmount && ShieldLowWarningThreshold >= Amount) {
+				if (ShieldLowWarningMessage != "")
+					Owner.A_Print(ShieldLowWarningMessage);
+			}
+		}
+	}
+	
+	override Inventory CreateCopy(Actor other) {
+		let copy = ShieldGenerator(Inventory.CreateCopy(other));
+		copy.SavePercent = SavePercent;
+		copy.MaxFullAbsorb = MaxFullAbsorb;
+		copy.CellEfficiency = CellEfficiency;
+		GoAwayAndDie();
+		return copy;
+	}
+	
+	override void Tick() {
+		super.Tick();
+		AbsorbCount = 0;
+	}
+}
+
+/**
+ * This ShieldGenerator alters the standard HUD to display shield status instead of armor status.
+ * 
+ * It has a rather large side effect: it becomes impossible to pick up other armor (it just disappears when picked up instead). This is because, to alter the standard HUD like that, it takes over and “lobotomizes” the BasicArmor instance that all player characters implicitly carry.
+ * 
+ * In the future, I hope that the BasicArmor class will be scrapped, and a more flexible API added to show armor status. For now, though, this hack is needed.
+ */
+class ExclusiveShieldGenerator : ShieldGenerator {
+	protected BasicArmor LoboBasicArmor;
+	
+	override void Tick() {
+		super.Tick();
+		
+		if (LoboBasicArmor == NULL || Owner != LoboBasicArmor.Owner) {
+			LoboBasicArmor = BasicArmor(Owner.FindInventory("BasicArmor"));
+			
+			if (LoboBasicArmor != NULL) {
+				LoboBasicArmor.SavePercent = 0;
+				LoboBasicArmor.MaxAbsorb = 0;
+				LoboBasicArmor.MaxFullAbsorb = 0;
+				LoboBasicArmor.BonusCount = 0;
+				LoboBasicArmor.ArmorType = GetClassName();
+			}
+		}
+		
+		if (LoboBasicArmor != NULL) {
+			LoboBasicArmor.ActualSaveAmount = LoboBasicArmor.Amount = Amount;
+			LoboBasicArmor.MaxAmount = MaxAmount;
+		}
+	}
+	
+	override bool HandlePickup(Inventory item) {
+		if (item is "Armor") {
+			item.bPickupGood = true;
+			return true;
+		}
+		else
+			return false;
+	}
+}

@@ -1,0 +1,72 @@
+class ShieldCell : Inventory replaces ArmorBonus {
+	int AmountRandomVariance;
+	property AmountRandomVariance: AmountRandomVariance;
+	
+	default {
+		+Inventory.KEEPDEPLETED;
+		Inventory.PickupMessage "Picked up a small shield cell.";
+		Inventory.Amount 2;
+		ShieldCell.AmountRandomVariance 1;
+		Radius 20;
+		Height 16;
+	}
+	
+	override void BeginPlay() {
+		super.BeginPlay();
+		
+		if (AmountRandomVariance != 0)
+			Amount += random(-AmountRandomVariance, AmountRandomVariance);
+	}
+	
+	override bool TryPickup(in out Actor other) {
+		let generator = ShieldGenerator.Of(other);
+		if (generator == NULL || !(self is generator.BaseCellType))
+			// If the recipient has no generator or an incompatible generator, don't try to pick up the cell.
+			return false;
+		
+		let af = bIgnoreSkill ? 1.0 : G_SkillPropertyFloat(SKILLP_ArmorFactor);
+		
+		if (sv_unlimited_pickup) {
+			generator.Amount += int(Amount * af);
+			Amount = 0;
+			GoAwayAndDie();
+			return true;
+		}
+		else if (generator.Amount < generator.MaxAmount) {
+			let give = min(generator.MaxAmount - generator.Amount, int(floor(Amount * af)));
+			generator.Amount += give;
+			Amount -= int(ceil(give / af));
+			
+			if (Amount <= 0)
+				GoAwayAndDie();
+			
+			return true;
+		}
+		else
+			return false;
+	}
+	
+	states {
+		Spawn:
+			BON2 ABCDCB 6;
+			loop;
+	}
+}
+
+class ShieldCellMedium : ShieldCell {
+	default {
+		Inventory.PickupMessage "Picked up a medium shield cell.";
+		Inventory.Amount 100;
+		ShieldCell.AmountRandomVariance 30;
+		Height 24;
+	}
+}
+
+class ShieldCellLarge : ShieldCell {
+	default {
+		Inventory.PickupMessage "Picked up a large shield cell.";
+		Inventory.Amount 200;
+		ShieldCell.AmountRandomVariance 50;
+		Height 32;
+	}
+}
