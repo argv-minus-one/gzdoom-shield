@@ -33,6 +33,8 @@ class ShieldGenerator : Armor {
 	
 	default {
 		+Inventory.KEEPDEPLETED;
+		+Inventory.UNDROPPABLE;
+		+Inventory.UNTOSSABLE;
 		Inventory.Amount 0;
 		Inventory.MaxAmount 200;
 		Inventory.Icon "ARM1A0";
@@ -108,6 +110,15 @@ class ShieldGenerator : Armor {
 		return copy;
 	}
 	
+	override bool HandlePickup(Inventory item) {
+		if (item is "ShieldGenerator") {
+			Console.Printf("\cr%s attempted to pick up a %s, which shouldn't happen.\n\crDid you try to 'give ShieldGenerator'? Don't do that. Instead, use 'give ShieldGeneratorUpgradeStandard' or 'give ShieldGeneratorUpgradeAdvanced' or 'give ShieldCell'.", Owner == NULL ? GetClassName() : Owner.GetClassName(), item.GetClassName());
+			return true;
+		}
+		else
+			return false;
+	}
+	
 	override void Tick() {
 		super.Tick();
 		AbsorbCount = 0;
@@ -153,7 +164,9 @@ class ExclusiveShieldGenerator : ShieldGenerator {
 	}
 	
 	override bool HandlePickup(Inventory item) {
-		if (item is "Armor") {
+		if (super.HandlePickup(item))
+			return true;
+		else if (item is "Armor") {
 			int sa;
 			
 			if (item is "BasicArmorPickup")
