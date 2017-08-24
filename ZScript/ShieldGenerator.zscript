@@ -125,7 +125,7 @@ class ShieldGenerator : Armor {
 		Icon = ChooseIcon();
 	}
 	
-	const DefaultIconCount = 6;
+	const DefaultIconCount = 7;
 	
 	static const String DefaultIconTextureNames[] = {
 		"SHDCF0",
@@ -133,7 +133,8 @@ class ShieldGenerator : Armor {
 		"SHDCD0",
 		"SHDCC0",
 		"SHDCB0",
-		"SHDCA0"
+		"SHDCA0",
+		"SHDCZ0"
 	};
 	
 	static const int DefaultIconThresholds[] = {
@@ -142,6 +143,7 @@ class ShieldGenerator : Armor {
 		100,
 		50,
 		25,
+		1,
 		0
 	};
 	
