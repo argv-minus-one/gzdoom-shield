@@ -3,13 +3,19 @@ class SpawnShieldGiver : StaticEventHandler {
 	override void PlayerRespawned(PlayerEvent evt) { PlayerSpawned(evt); }
 	
 	void PlayerSpawned(PlayerEvent evt) {
+		let pc = players[evt.PlayerNumber].mo;
+		Actor generator = pc.FindInventory("ShieldGenerator", subclass: true);
+		
+		if (generator != NULL)
+			// This player already has a shield generator.
+			return;
+		
 		Class<Actor> generatorClass = Actor.GetReplacement("ShieldGenerator");
 		if (generatorClass == NULL || generatorClass == "ShieldGenerator")
 			// If there is no replacement for ShieldGenerator, default to giving an ExclusiveShieldGenerator.
 			generatorClass = "ExclusiveShieldGenerator";
 		
-		let pc = players[evt.PlayerNumber].mo;
-		let generator = Actor.Spawn(generatorClass);
+		generator = Actor.Spawn(generatorClass);
 		
 		if (!(generator is "Inventory") || !Inventory(generator).CallTryPickup(pc)) {
 			Console.Printf("\crFailed to give %s to %s.", generator.GetClassName(), pc.GetClassName());
