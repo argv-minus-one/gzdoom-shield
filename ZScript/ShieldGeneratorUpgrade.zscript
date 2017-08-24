@@ -150,9 +150,9 @@ class ShieldGeneratorUpgrade : Inventory {
 	}
 }
 
-class ShieldGeneratorUpgradeType3 : ShieldGeneratorUpgrade replaces GreenArmor {
+class ShieldGeneratorUpgradeStandard : ShieldGeneratorUpgrade replaces GreenArmor {
 	default {
-		Inventory.PickupMessage "Picked up a type 3 shield generator upgrade!";
+		Inventory.PickupMessage "Picked up a shield generator upgrade!";
 		Inventory.Icon "ARM1A0";
 		ShieldGeneratorUpgrade.IncludedCell 70, 100, "ShieldCellMedium";
 		ShieldGeneratorUpgrade.SavePercentBonus 3, 8;
@@ -170,9 +170,9 @@ class ShieldGeneratorUpgradeType3 : ShieldGeneratorUpgrade replaces GreenArmor {
 	}
 }
 
-class ShieldGeneratorUpgradeType7 : ShieldGeneratorUpgrade replaces BlueArmor {
+class ShieldGeneratorUpgradeAdvanced : ShieldGeneratorUpgrade replaces BlueArmor {
 	default {
-		Inventory.PickupMessage "Picked up a type 7 advanced shield generator upgrade!";
+		Inventory.PickupMessage "Picked up an advanced shield generator upgrade!";
 		Inventory.Icon "ARM2A0";
 		ShieldGeneratorUpgrade.IncludedCell 150, 200, "ShieldCellLarge";
 		ShieldGeneratorUpgrade.SavePercentBonus 8, 14;
