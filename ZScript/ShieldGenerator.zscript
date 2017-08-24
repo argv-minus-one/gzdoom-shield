@@ -121,6 +121,13 @@ class ShieldGenerator : Armor {
 class ExclusiveShieldGenerator : ShieldGenerator {
 	protected BasicArmor LoboBasicArmor;
 	
+	double ArmorPickupAmountFactor;
+	property ArmorPickupAmountFactor: ArmorPickupAmountFactor;
+	
+	default {
+		ExclusiveShieldGenerator.ArmorPickupAmountFactor 0.4;
+	}
+	
 	override void Tick() {
 		super.Tick();
 		
@@ -144,6 +151,24 @@ class ExclusiveShieldGenerator : ShieldGenerator {
 	
 	override bool HandlePickup(Inventory item) {
 		if (item is "Armor") {
+			int sa;
+			
+			if (item is "BasicArmorPickup")
+				sa = BasicArmorPickup(item).SaveAmount;
+			else if (item is "BasicArmorBonus")
+				sa = BasicArmorBonus(item).SaveAmount;
+			else
+				sa = item.Amount;
+			
+			let cell = ShieldCell(Spawn("ShieldCell", Owner.Pos));
+			cell.Amount = int(sa * ArmorPickupAmountFactor);
+			
+			if (!cell.CallTryPickup(Owner) && !cell.bDestroyed && cell.Amount > 0) {
+				cell.BecomePickup();
+				cell.DropTime = 30;
+				cell.bSpecial = cell.bSolid = false;
+			}
+			
 			item.bPickupGood = true;
 			return true;
 		}
