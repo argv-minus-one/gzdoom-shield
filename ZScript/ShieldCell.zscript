@@ -56,8 +56,8 @@ class ShieldCell : Inventory replaces ArmorBonus {
 class ShieldCellMedium : ShieldCell {
 	default {
 		Inventory.PickupMessage "Picked up a medium shield cell.";
-		Inventory.Amount 100;
-		ShieldCell.AmountRandomVariance 30;
+		Inventory.Amount 45;
+		ShieldCell.AmountRandomVariance 15;
 		Height 24;
 	}
 }
@@ -65,8 +65,8 @@ class ShieldCellMedium : ShieldCell {
 class ShieldCellLarge : ShieldCell {
 	default {
 		Inventory.PickupMessage "Picked up a large shield cell.";
-		Inventory.Amount 200;
-		ShieldCell.AmountRandomVariance 50;
+		Inventory.Amount 70;
+		ShieldCell.AmountRandomVariance 20;
 		Height 32;
 	}
 }

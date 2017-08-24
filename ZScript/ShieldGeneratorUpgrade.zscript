@@ -154,10 +154,10 @@ class ShieldGeneratorUpgradeStandard : ShieldGeneratorUpgrade replaces GreenArmo
 	default {
 		Inventory.PickupMessage "Picked up a shield generator upgrade!";
 		Inventory.Icon "ARM1A0";
-		ShieldGeneratorUpgrade.IncludedCell 70, 100, "ShieldCellMedium";
-		ShieldGeneratorUpgrade.SavePercentBonus 3, 8;
-		ShieldGeneratorUpgrade.FullAbsorbBonus 0.5, 1;
-		ShieldGeneratorUpgrade.CellEfficiencyBonus 0.02, 0.04;
+		ShieldGeneratorUpgrade.IncludedCell 30, 60, "ShieldCellMedium";
+		ShieldGeneratorUpgrade.SavePercentBonus 0.5, 1.5;
+		ShieldGeneratorUpgrade.FullAbsorbBonus 0, 0.5;
+		ShieldGeneratorUpgrade.CellEfficiencyBonus 0, 0.01;
 		Radius 20;
 		Height 16;
 	}
@@ -174,10 +174,10 @@ class ShieldGeneratorUpgradeAdvanced : ShieldGeneratorUpgrade replaces BlueArmor
 	default {
 		Inventory.PickupMessage "Picked up an advanced shield generator upgrade!";
 		Inventory.Icon "ARM2A0";
-		ShieldGeneratorUpgrade.IncludedCell 150, 200, "ShieldCellLarge";
-		ShieldGeneratorUpgrade.SavePercentBonus 8, 14;
-		ShieldGeneratorUpgrade.FullAbsorbBonus 1, 2;
-		ShieldGeneratorUpgrade.CellEfficiencyBonus 0.05, 0.1;
+		ShieldGeneratorUpgrade.IncludedCell 50, 90, "ShieldCellLarge";
+		ShieldGeneratorUpgrade.SavePercentBonus 1.5, 3;
+		ShieldGeneratorUpgrade.FullAbsorbBonus 0.5, 1;
+		ShieldGeneratorUpgrade.CellEfficiencyBonus 0.01, 0.03;
 		Radius 20;
 		Height 16;
 	}
