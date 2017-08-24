@@ -72,13 +72,16 @@ class ShieldGenerator : Armor {
 			if (MaxAbsorb > 0 && saved + AbsorbCount > MaxAbsorb)
 				saved = MAX(0,  MaxAbsorb - AbsorbCount);
 		}
-
+		
+		if (saved <= 0)
+			saved = 1;
+		
 		if (Amount < saved)
 			saved = Amount;
 		
 		let previousAmount = Amount;
 		newdamage = damage - saved;
-		Amount -= int(saved * CellEfficiency);
+		Amount -= max(1, int(saved * CellEfficiency));
 		AbsorbCount += saved;
 		
 		if (developer >= 1)
