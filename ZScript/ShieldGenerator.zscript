@@ -122,6 +122,41 @@ class ShieldGenerator : Armor {
 	override void Tick() {
 		super.Tick();
 		AbsorbCount = 0;
+		Icon = ChooseIcon();
+	}
+	
+	const DefaultIconCount = 6;
+	
+	static const String DefaultIconTextureNames[] = {
+		"SHDCF0",
+		"SHDCE0",
+		"SHDCD0",
+		"SHDCC0",
+		"SHDCB0",
+		"SHDCA0"
+	};
+	
+	static const int DefaultIconThresholds[] = {
+		200,
+		150,
+		100,
+		50,
+		25,
+		0
+	};
+	
+	private TextureID DefaultIconTextures[DefaultIconCount];
+	
+	protected virtual TextureID ChooseIcon() {
+		if (!DefaultIconTextures[0])
+			for (int i = 0; i < DefaultIconCount; i++)
+				DefaultIconTextures[i] = TexMan.CheckForTexture(DefaultIconTextureNames[i], TexMan.Type_Any);
+		
+		for (int i = 0; i < DefaultIconCount; i++)
+			if (Amount >= DefaultIconThresholds[i])
+				return DefaultIconTextures[i];
+		
+		return DefaultIconTextures[DefaultIconCount - 1];
 	}
 }
 
@@ -160,6 +195,7 @@ class ExclusiveShieldGenerator : ShieldGenerator {
 		if (LoboBasicArmor != NULL) {
 			LoboBasicArmor.ActualSaveAmount = LoboBasicArmor.Amount = Amount;
 			LoboBasicArmor.MaxAmount = MaxAmount;
+			LoboBasicArmor.Icon = Icon;
 		}
 	}
 	
