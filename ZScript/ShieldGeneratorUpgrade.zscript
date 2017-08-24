@@ -13,7 +13,6 @@ class ShieldGeneratorUpgrade : Inventory {
 	property CellEfficiencyBonus: CellEfficiencyBonusMin, CellEfficiencyBonusMax;
 	
 	default {
-		+Inventory.AUTOACTIVATE;
 		+COUNTITEM;
 	}
 	
