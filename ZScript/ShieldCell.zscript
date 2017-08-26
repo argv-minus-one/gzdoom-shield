@@ -57,7 +57,7 @@ class ShieldCell : Inventory {
 class ShieldCellMedium : ShieldCell {
 	default {
 		Inventory.PickupMessage "Picked up a medium shield cell.";
-		Inventory.Amount 45;
+		Inventory.Amount 85;
 		ShieldCell.AmountRandomVariance 15;
 		Height 24;
 		Scale 1;
@@ -67,7 +67,7 @@ class ShieldCellMedium : ShieldCell {
 class ShieldCellLarge : ShieldCell {
 	default {
 		Inventory.PickupMessage "Picked up a large shield cell.";
-		Inventory.Amount 70;
+		Inventory.Amount 150;
 		ShieldCell.AmountRandomVariance 20;
 		Height 32;
 		Scale 1.5;
