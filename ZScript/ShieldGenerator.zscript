@@ -36,7 +36,7 @@ class ShieldGenerator : Armor {
 		+Inventory.UNDROPPABLE;
 		+Inventory.UNTOSSABLE;
 		Inventory.Amount 0;
-		Inventory.MaxAmount 200;
+		Inventory.MaxAmount 100;
 		Inventory.Icon "ARM1A0";
 		ShieldGenerator.SavePercent 30;
 		ShieldGenerator.MaxSavePercent 80;

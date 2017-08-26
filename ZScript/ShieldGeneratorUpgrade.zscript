@@ -12,6 +12,9 @@ class ShieldGeneratorUpgrade : Inventory {
 	double CellEfficiencyBonusMin, CellEfficiencyBonusMax, CellEfficiencyBonus;
 	property CellEfficiencyBonus: CellEfficiencyBonusMin, CellEfficiencyBonusMax;
 	
+	int CapacityBonusMin, CapacityBonusMax, CapacityBonus;
+	property CapacityBonus: CapacityBonusMin, CapacityBonusMax;
+	
 	default {
 		+COUNTITEM;
 	}
@@ -23,6 +26,7 @@ class ShieldGeneratorUpgrade : Inventory {
 		SavePercentBonus = frandom(SavePercentBonusMin, SavePercentBonusMax);
 		FullAbsorbBonus = frandom(FullAbsorbBonusMin, FullAbsorbBonusMax);
 		CellEfficiencyBonus = frandom(CellEfficiencyBonusMin, CellEfficiencyBonusMax);
+		CapacityBonus = random(CapacityBonusMin, CapacityBonusMax);
 	}
 	
 	override bool TryPickup(in out Actor other) {
@@ -47,7 +51,8 @@ class ShieldGeneratorUpgrade : Inventory {
 		return
 			InstallSaveUpgrade(generator) |
 			InstallFullAbsorbUpgrade(generator) |
-			InstallCellEfficiencyUpgrade(generator);
+			InstallCellEfficiencyUpgrade(generator) |
+			InstallCapacityUpgrade(generator);
 	}
 	
 	private bool InstallSaveUpgrade(ShieldGenerator generator) {
@@ -112,6 +117,11 @@ class ShieldGeneratorUpgrade : Inventory {
 		return true;
 	}
 	
+	private bool InstallCapacityUpgrade(ShieldGenerator generator) {
+		generator.MaxAmount += CapacityBonus;
+		return true;
+	}
+	
 	/**
 	 * Give the included cells to the given shield generator.
 	 * 
@@ -158,6 +168,7 @@ class ShieldGeneratorUpgradeStandard : ShieldGeneratorUpgrade replaces GreenArmo
 		ShieldGeneratorUpgrade.SavePercentBonus 0.5, 1.5;
 		ShieldGeneratorUpgrade.FullAbsorbBonus 0, 0.5;
 		ShieldGeneratorUpgrade.CellEfficiencyBonus 0, 0.01;
+		ShieldGeneratorUpgrade.CapacityBonus 3, 6;
 		Radius 20;
 		Height 16;
 	}
@@ -178,6 +189,7 @@ class ShieldGeneratorUpgradeAdvanced : ShieldGeneratorUpgrade replaces BlueArmor
 		ShieldGeneratorUpgrade.SavePercentBonus 1.5, 3;
 		ShieldGeneratorUpgrade.FullAbsorbBonus 0.5, 1;
 		ShieldGeneratorUpgrade.CellEfficiencyBonus 0.01, 0.03;
+		ShieldGeneratorUpgrade.CapacityBonus 8, 16;
 		Radius 20;
 		Height 16;
 	}
