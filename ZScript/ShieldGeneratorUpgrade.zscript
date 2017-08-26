@@ -118,7 +118,12 @@ class ShieldGeneratorUpgrade : Inventory {
 	}
 	
 	private bool InstallCapacityUpgrade(ShieldGenerator generator) {
+		let oldCapacity = generator.MaxAmount;
 		generator.MaxAmount += CapacityBonus;
+		
+		if (developer >= 1)
+			Console.Printf("%s: Generator capacity increased from %d to %d.", GetClassName(), oldCapacity, generator.MaxAmount);
+		
 		return true;
 	}
 	
