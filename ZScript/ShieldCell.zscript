@@ -1,4 +1,4 @@
-class ShieldCell : Inventory replaces ArmorBonus {
+class ShieldCell : Inventory {
 	int AmountRandomVariance;
 	property AmountRandomVariance: AmountRandomVariance;
 	
