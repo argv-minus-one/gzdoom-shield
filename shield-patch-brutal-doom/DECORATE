@@ -1,0 +1,3 @@
+actor ShieldCellBD : ShieldCell replaces ArmorShard {}
+actor ShieldGeneratorUpgradeStandardBD : ShieldGeneratorUpgradeStandard replaces LightArmor {}
+actor ShieldGeneratorUpgradeAdvancedBD : ShieldGeneratorUpgradeAdvanced replaces HeavyArmor {}
