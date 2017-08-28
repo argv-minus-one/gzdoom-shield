@@ -26,7 +26,7 @@ class SpawnShieldGiver : StaticEventHandler {
 
 class ShieldReplacementArmorBonus : RandomSpawner replaces ArmorBonus {
 	default {
-		DropItem "ShieldCell", 255, 50;
+		DropItem "ShieldCell", 255, 94;
 		DropItem "ShieldCellMedium", 255, 5;
 		DropItem "ShieldCellLarge", 255, 1;
 	}
