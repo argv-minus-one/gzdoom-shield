@@ -29,7 +29,16 @@ class ShieldGenerator : Armor {
 	String ShieldDepletedWarningMessage;
 	property ShieldDepletedWarning: ShieldDepletedWarningMessage;
 	
+	Color ShieldDamageFlashColor;
+	property ShieldDamageFlashColor: ShieldDamageFlashColor;
+	
+	Sound ShieldDamageSound;
+	property ShieldDamageSound: ShieldDamageSound;
+	
 	int AbsorbCount;
+	
+	/** This increases when the shield takes damage, and decreases at a rate of 1 per tic. */
+	int RecentShieldDamage;
 	
 	default {
 		+Inventory.KEEPDEPLETED;
@@ -46,6 +55,8 @@ class ShieldGenerator : Armor {
 		ShieldGenerator.MaxAbsorb int.max;
 		ShieldGenerator.MaxFullAbsorb 1;
 		ShieldGenerator.CellEfficiency 1, 0.5;
+		ShieldGenerator.ShieldDamageFlashColor 0x8888ff;
+		ShieldGenerator.ShieldDamageSound "weapons/plasmax";
 	}
 	
 	static ShieldGenerator Of(Actor actor) {
@@ -84,10 +95,13 @@ class ShieldGenerator : Armor {
 				saved = maxSave;
 		}
 		
+		let shieldDamage = int(ceil(saved * CellEfficiency));
+		
 		let previousAmount = Amount;
 		newdamage = damage - saved;
-		Amount -= max(1, int(ceil(saved * CellEfficiency)));
+		Amount -= max(1, shieldDamage);
 		AbsorbCount += saved;
+		RecentShieldDamage += shieldDamage;
 		
 		if (developer >= 1)
 			Console.Printf("%s absorbed %d/%d damage (%f%% absorption, %d threshold, %d absorbed this tic). Charge down from %d to %d.", GetClassName(), saved, damage, SavePercent, int(MaxFullAbsorb), AbsorbCount, previousAmount, Amount);
@@ -102,6 +116,8 @@ class ShieldGenerator : Armor {
 					Owner.A_Print(ShieldLowWarningMessage);
 			}
 		}
+		
+		Owner.A_PlaySound(whattoplay: ShieldDamageSound, slot: CHAN_AUTO);
 	}
 	
 	override Inventory CreateCopy(Actor other) {
@@ -126,6 +142,7 @@ class ShieldGenerator : Armor {
 		super.Tick();
 		AbsorbCount = 0;
 		Icon = ChooseIcon();
+		RecentShieldDamage = max(RecentShieldDamage - 1, 0);
 	}
 	
 	const DefaultIconCount = 7;
@@ -162,6 +179,10 @@ class ShieldGenerator : Armor {
 				return DefaultIconTextures[i];
 		
 		return DefaultIconTextures[DefaultIconCount - 1];
+	}
+	
+	override Color GetBlend() {
+		return (ShieldDamageFlashColor & 0xffffff) | (min(RecentShieldDamage * 4, 192) << 24);
 	}
 }
 
