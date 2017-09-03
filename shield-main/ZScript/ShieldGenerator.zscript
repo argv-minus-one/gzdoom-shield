@@ -239,7 +239,7 @@ class ExclusiveShieldGenerator : ShieldGenerator {
 				sa = item.Amount;
 			
 			let cell = ShieldCell(Spawn("ShieldCell", Owner.Pos));
-			cell.Amount = int(sa * ArmorPickupAmountFactor);
+			cell.Amount = int(ceil(sa * ArmorPickupAmountFactor));
 			
 			if (!cell.CallTryPickup(Owner) && !cell.bDestroyed && cell.Amount > 0) {
 				cell.BecomePickup();
