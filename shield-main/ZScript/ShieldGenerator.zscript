@@ -219,8 +219,8 @@ class ExclusiveShieldGenerator : ShieldGenerator {
 		}
 		
 		if (LoboBasicArmor != NULL) {
-			LoboBasicArmor.ActualSaveAmount = LoboBasicArmor.Amount = Amount;
-			LoboBasicArmor.MaxAmount = MaxAmount;
+			LoboBasicArmor.Amount = Amount;
+			LoboBasicArmor.ActualSaveAmount = LoboBasicArmor.MaxAmount = MaxAmount;
 			LoboBasicArmor.Icon = Icon;
 		}
 	}
