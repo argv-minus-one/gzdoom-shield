@@ -63,6 +63,19 @@ class ShieldGenerator : Armor {
 		return actor == NULL ? NULL : ShieldGenerator(actor.FindInventory("ShieldGenerator", subclass: true));
 	}
 	
+	const IGNORED_DAMAGE_TYPES_NUM = 11;
+	static const Name IGNORED_DAMAGE_TYPES[] = {
+		"Drowning", "Slime", "Fire", "Telefrag", "Falling", "Suicide", "Exit", "Massacre", "Extreme", "InstantDeath", "Quake"
+	};
+	
+	virtual int ApplyAbsorbFactors(int damage, Name damageType) {
+		for (int i = 0; i < IGNORED_DAMAGE_TYPES_NUM; i++)
+			if (IGNORED_DAMAGE_TYPES[i] == damageType)
+				return 0;
+		
+		return damage;
+	}
+	
 	override void AbsorbDamage(int damage, Name damageType, out int newdamage) {
 		if (DamageTypeDefinition.IgnoreArmor(damageType))
 			return;
@@ -76,11 +89,20 @@ class ShieldGenerator : Armor {
 		
 		int saved;
 		int full = MAX(0, MaxFullAbsorb - AbsorbCount);
+		let ignored = damage - ApplyAbsorbFactors(damage, damageType);
 		
-		if (damage < full)
-			saved = damage;
+		if (damage == ignored) {
+			if (developer >= 1)
+				Console.Printf("%s was hit by %d damage of type %s, which this shield does not protect against.", GetClassName(), damage, damageType);
+			
+			newdamage = damage;
+			return;
+		}
+		
+		if (damage - ignored < full)
+			saved = damage - ignored;
 		else {
-			saved = full + int((damage - full) * (SavePercent / 100.0));
+			saved = full + int((damage - ignored - full) * (SavePercent / 100.0));
 			
 			if (MaxAbsorb > 0 && saved + AbsorbCount > MaxAbsorb)
 				saved = MAX(0,  MaxAbsorb - AbsorbCount);
@@ -98,13 +120,13 @@ class ShieldGenerator : Armor {
 		let shieldDamage = int(ceil(saved * CellEfficiency));
 		
 		let previousAmount = Amount;
-		newdamage = damage - saved;
+		newdamage = damage - saved + ignored;
 		Amount -= max(1, shieldDamage);
 		AbsorbCount += saved;
 		RecentShieldDamage += shieldDamage;
 		
 		if (developer >= 1)
-			Console.Printf("%s absorbed %d/%d damage (%f%% absorption, %d threshold, %d absorbed this tic). Charge down from %d to %d.", GetClassName(), saved, damage, SavePercent, int(MaxFullAbsorb), AbsorbCount, previousAmount, Amount);
+			Console.Printf("%s absorbed %d/%d damage (type %s; %f%% general absorption; %d bypasses shield; %d threshold; %d absorbed this tic). Charge down from %d to %d.", GetClassName(), saved, damage, damageType, SavePercent, ignored, int(MaxFullAbsorb), AbsorbCount, previousAmount, Amount);
 		
 		if (Owner != NULL) {
 			if (previousAmount > 0 && Amount <= 0) {
